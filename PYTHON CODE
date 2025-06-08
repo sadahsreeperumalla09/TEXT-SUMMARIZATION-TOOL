@@ -1,0 +1,39 @@
+import requests
+from bs4 import BeautifulSoup
+from transformers import pipeline
+import textwrap
+
+def load_summarizer():
+    return pipeline("summarization", model="facebook/bart-large-cnn")
+
+def fetch_article_text(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        paragraphs = soup.find_all('p')
+        text = ' '.join([para.get_text() for para in paragraphs])
+        return text.strip()
+    except Exception as e:
+        return f"Error fetching article: {e}"
+
+def summarize_text(text, max_length=200, min_length=50):
+    summarizer = load_summarizer()
+    summary = summarizer(text, max_length=max_length, min_length=min_length, do_sample=False)
+    return summary[0]['summary_text']
+
+def main():
+    url = input("Enter the URL of the article: ")
+    print("\nFetching article...\n")
+    article = fetch_article_text(url)
+    if not article or "Error" in article:
+        print(article)
+        return
+    print("Original Article (truncated):")
+    print(textwrap.fill(article[:1000], width=100))
+    print("\nGenerating Summary...\n")
+    summary = summarize_text(article)
+    print("Summary:")
+    print(textwrap.fill(summary, width=100))
+
+if __name__ == "__main__":
+    main()
